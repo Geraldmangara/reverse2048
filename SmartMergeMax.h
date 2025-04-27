@@ -9,6 +9,13 @@
 
 using namespace std;
 
+/**
+ * @class SmartMergeMax
+ * @brief AI algorithm for a grid-based merge game that aims to create tiles with value 2.
+ *        The algorithm evaluates moves by simulating them and scoring based on how close
+ *        they get to creating the win value (2).
+ */
+
 class SmartMergeMax {
 private:
     const int EMPTY = -1;
