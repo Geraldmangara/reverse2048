@@ -16,7 +16,8 @@ using namespace std;
  *        they get to creating the win value (2).
  */
 
-class SmartMergeMax {
+class SmartMergeMax
+{
 private:
     const int EMPTY = -1;
     const int WIN_VALUE = 2;
@@ -28,15 +29,12 @@ private:
 
     // Simulate a move and count merges with weighting
     pair<vector<vector<int>>, float> simulateMoveAndCountMerges(
-        const vector<vector<int>>& grid,
-        const Position& pos,
-        char direction) const;
+                              const vector<vector<int>>& grid,
+                              const Position& pos,
+                              char direction) const;
 
     // Modified from simulateProcessMovement to count merges with weights
-    float simulateProcessMovementAndCountMerges(
-        Position& pos,
-        vector<vector<int>>& grid,
-        char dir) const;
+    float simulateProcessMovementAndCountMerges(Position& pos,vector<vector<int>>& grid,char dir) const;
 
 public:
     SmartMergeMax(); // Constructor

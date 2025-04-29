@@ -23,7 +23,7 @@ private:
     vector<int> possibleSpawnValues; // Values that can spawn on the grid
     unordered_map<string, double> evalCache; // Cache for grid evaluations
     // Decay parameters
-    const double decayFactor = 0.5;  // Controls how quickly the weight decreases
+    const double decayFactor = 0.1;  // Controls how quickly the weight decreases
 
     // Direction vector structure for movement processing
     struct DirVector
