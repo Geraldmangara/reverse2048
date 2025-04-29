@@ -299,15 +299,10 @@ bool GridGame::checkGameOver(const vector<vector<int>>& grid) const
 
 
 // Constructor that loads config and starts game
-GridGame::GridGame(const string& InputFile) : rng(random_device()())
+GridGame::GridGame(currentNumber,gridSize) : rng(random_device()())
 {
-    ifstream file(InputFile);
-    if(!file)
-    {
-        cout << "Error: Please input the right config file. Look at the documentation and the readmefile(reverse2048)!" << endl;
-    }
-
-    file >> currentNumber >> gridSize;
+   
+    
     validateConfiguration();
     initializeGrids();
 
