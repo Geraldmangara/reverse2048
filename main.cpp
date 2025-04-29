@@ -23,11 +23,14 @@ int main(int argc, char* argv[])
         {
             configFile = argv[1];
         }
-
+     int currentNumber,gridSize;
+        char s;
+        
+        while(currentNumber,gridSize){
         // Create and run the game
-        GridGame game(configFile);
+        GridGame game(currentNumber,gridSize);
         game.run();
-
+        }
     }
     catch (const exception& e)
     {
