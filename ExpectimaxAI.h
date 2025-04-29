@@ -1,5 +1,3 @@
-
-
 #ifndef EXPECTIMAXAI_H_INCLUDED
 #define EXPECTIMAXAI_H_INCLUDED
 
@@ -13,282 +11,84 @@
 
 using namespace std;
 
-
 class GridGame;
 
-
-
-
-class ExpectimaxAI {
+class ExpectimaxAI
+{
 private:
-    vector<vector<int>>& grid;
-    Position& position;
-    const int gridSize, maxDepth, EMPTY;
-    int startNumber;
-    vector<int> possibleSpawnValues;
-    unordered_map<string, double> evalCache;
+    vector<vector<int>>& grid;       // Reference to the game grid
+    Position& position;              // Reference to the player position
+    const int gridSize, maxDepth, EMPTY;  // Grid dimensions, search depth, and empty cell value
+    int startNumber;                 // Starting number for tile generation
+    vector<int> possibleSpawnValues; // Values that can spawn on the grid
+    unordered_map<string, double> evalCache; // Cache for grid evaluations
     // Decay parameters
-    const double decayFactor = 0.7;  // Controls how quickly the weight decreases
+    const double decayFactor = 0.5;  // Controls how quickly the weight decreases
 
-    struct DirVector {
-        int rowDelta, colDelta, startRow, endRow, rowStep, startCol, endCol, colStep;
+    // Direction vector structure for movement processing
+    struct DirVector
+    {
+        int rowDelta, colDelta;      // Movement direction
+        int startRow, endRow, rowStep; // Row iteration parameters
+        int startCol, endCol, colStep; // Column iteration parameters
     };
-    unordered_map<char, DirVector> dirVectors;
+    unordered_map<char, DirVector> dirVectors; // Maps direction keys to vectors
 
-    string gridToString(const vector<vector<int>>& g) const {
-        string result;
-        for (const auto& row : g)
-            for (int val : row)
-                result += to_string(val) + ",";
-        return result;
-    }
+    // Converts grid to string representation for caching
+    string gridToString(const vector<vector<int>>& g) const;
 
-    bool isValidPosition(int row, int col) const {
-        return row >= 0 && row < gridSize && col >= 0 && col < gridSize;
-    }
+    // Checks if a position is within grid boundaries
+    bool isValidPosition(int row, int col) const;
 
-    void initDirectionVectors() {
-        dirVectors = {
-            {'i', {-1, 0, 1, gridSize, 1, 0, gridSize, 1}},    // Up
-            {'k', {1, 0, gridSize-2, -1, -1, 0, gridSize, 1}}, // Down
-            {'j', {0, -1, 0, gridSize, 1, 1, gridSize, 1}},    // Left
-            {'l', {0, 1, 0, gridSize, 1, gridSize-2, -1, -1}}  // Right
-        };
-    }
+    // Initializes direction vectors for all possible moves
+    void initDirectionVectors();
 
-    // Initialize possible spawn values based on the starting number
-    void initPossibleSpawnValues() {
-        if (startNumber == 512) {
-            possibleSpawnValues = {256, 128, 64};
-        } else if (startNumber == 256) {
-            possibleSpawnValues = {128, 64, 32};
-        } else if (startNumber == 128) {
-            possibleSpawnValues = {64, 32, 16};
-        } else {
-            // Default case - just use the startNumber
-            possibleSpawnValues = {startNumber};
-        }
-    }
+    // Initializes possible spawn values based on startNumber
+    void initPossibleSpawnValues();
 
-    // Calculate position weight based on exponential decay from a corner
-    double getPositionWeight(int row, int col) const {
-        // Using bottom-right corner as the preferred position
-        int distanceFromCorner = (gridSize - 1 - row) + (gridSize - 1 - col);
-        return pow(decayFactor, distanceFromCorner);
-    }
+    // Calculates position weight based on distance from corner
+    double getPositionWeight(int row, int col) const;
 
-    bool tryMove(const vector<vector<int>>& g, char dir) const {
-        const auto& dv = dirVectors.at(dir);
-        for (int i = dv.startRow; i != dv.endRow; i += dv.rowStep) {
-            for (int j = dv.startCol; j != dv.endCol; j += dv.colStep) {
-                if (g[i][j] != EMPTY) {
-                    int ni = i + dv.rowDelta, nj = j + dv.colDelta;
-                    if (isValidPosition(ni, nj) && (g[ni][nj] == EMPTY || g[ni][nj] == g[i][j]))
-                        return true;
-                }
-            }
-        }
-        return false;
-    }
+    // Checks if a move in the given direction is possible
+    bool tryMove(const vector<vector<int>>& g, char dir) const;
 
-    vector<vector<int>> simulateMove(const vector<vector<int>>& g, char dir) const {
-        vector<vector<int>> newGrid = g;
-        const auto& dv = dirVectors.at(dir);
+    // Simulates a move in the given direction and returns new grid
+    vector<vector<int>> simulateMove(const vector<vector<int>>& g, char dir) const;
 
-        for (int i = dv.startRow; i != dv.endRow; i += dv.rowStep) {
-            for (int j = dv.startCol; j != dv.endCol; j += dv.colStep) {
-                if (newGrid[i][j] == EMPTY) continue;
+    // Returns a list of all empty cell positions
+    vector<Position> getEmptyCells(const vector<vector<int>>& g) const;
 
-                int ni = i, nj = j;
-                while (true) {
-                    int next_i = ni + dv.rowDelta, next_j = nj + dv.colDelta;
-                    if (!isValidPosition(next_i, next_j)) break;
+    // Checks if the grid contains the winning value of 1
+    bool hasValueOne(const vector<vector<int>>& g) const;
 
-                    if (newGrid[next_i][next_j] == EMPTY) {
-                        ni = next_i;
-                        nj = next_j;
-                    } else if (newGrid[next_i][next_j] == newGrid[i][j]) {
-                        ni = next_i;
-                        nj = next_j;
-                        break;
-                    } else {
-                        break;
-                    }
-                }
+    // Determines if the game is over (won or no moves possible)
+    bool checkGameOver(const vector<vector<int>>& g) const;
 
-                if (ni != i || nj != j) {
-                    if (newGrid[ni][nj] == newGrid[i][j])
-                        newGrid[ni][nj] /= 2;  // Merge by division
-                    else
-                        newGrid[ni][nj] = newGrid[i][j];
-                    newGrid[i][j] = EMPTY;
-                }
-            }
-        }
-        return newGrid;
-    }
+    // Evaluates grid state and returns a score
+    double evaluateGrid(const vector<vector<int>>& g) const;
 
-    vector<Position> getEmptyCells(const vector<vector<int>>& g) const {
-        vector<Position> emptyCells;
-        for (int i = 0; i < gridSize; i++)
-            for (int j = 0; j < gridSize; j++)
-                if (g[i][j] == EMPTY)
-                    emptyCells.push_back({i, j});
-        return emptyCells;
-    }
-
-    bool hasValueOne(const vector<vector<int>>& g) const {
-        for (int i = 0; i < gridSize; i++)
-            for (int j = 0; j < gridSize; j++)
-                if (g[i][j] == 1)
-                    return true;
-        return false;
-    }
-
-    bool checkGameOver(const vector<vector<int>>& g) const {
-        if (hasValueOne(g)) return true;
-
-        // Check for empty cells
-        for (int i = 0; i < gridSize; i++)
-            for (int j = 0; j < gridSize; j++)
-                if (g[i][j] == EMPTY)
-                    return false;
-
-        // Check for possible merges
-        for (int i = 0; i < gridSize; i++) {
-            for (int j = 0; j < gridSize; j++) {
-                if ((j < gridSize - 1 && g[i][j] == g[i][j+1]) ||
-                    (i < gridSize - 1 && g[i][j] == g[i+1][j]))
-                    return false;
-            }
-        }
-        return true;
-    }
-
-    double evaluateGrid(const vector<vector<int>>& g) const {
-        if (hasValueOne(g)) return DBL_MAX;
-
-        double score = 0.0;
-        int emptyCells = 0;
-        double mergeOpportunities = 0.0;
-        int minValue = INT_MAX;
-
-        for (int i = 0; i < gridSize; i++) {
-            for (int j = 0; j < gridSize; j++) {
-                if (g[i][j] == EMPTY) {
-                    emptyCells++;
-                } else {
-                    // Apply position weight with exponential decay
-                    double positionWeight = getPositionWeight(i, j);
-
-                    //SCORE: The most important line of code
-                 score += (1000.0 / g[i][j]) * positionWeight;// Prefer smaller values with position-based weighting
-                     score += log2(g[i][j]) * positionWeight;// second: the evaluation now gives a higher score for game states where larger-valued tiles (higher log2 value) are located in positions with higher position weight (closer to the bottom-right corner).
-                     score -= (double)g[i][j] * positionWeight; // third:this gives a higher score for states where larger tiles are closer to the bottom-right corner. The increase in score is directly proportional to the tile's value and the position weight.
-                      score -= ((double)g[i][j] * g[i][j]) * positionWeight;// fourth: This creates a stronger pull for the AI to get the absolute largest tiles into the bottom-right corner. Might be useful if consolidating the very first high-value tiles is the main bottleneck to reaching '1'.
-                    // Track minimum value
-                    if (g[i][j] < minValue)
-                        minValue = g[i][j];
-
-                    // Count merge opportunities
-                    if (j < gridSize - 1 && g[i][j] == g[i][j+1])
-                        mergeOpportunities += 1.0;
-                    if (i < gridSize - 1 && g[i][j] == g[i+1][j])
-                        mergeOpportunities += 1.0;
-                }
-            }
-        }
-
-        return score + (4* emptyCells) + (10.0 * mergeOpportunities);
-    }
-
-    double expectimax(const vector<vector<int>>& g, int depth, bool isMaxPlayer) {
-        // Check cache
-        string cacheKey = gridToString(g) + to_string(depth) + (isMaxPlayer ? "m" : "c");
-        if (evalCache.find(cacheKey) != evalCache.end())
-            return evalCache[cacheKey];
-
-        // Terminal conditions
-        if (hasValueOne(g)) return DBL_MAX;
-        if (depth == 0 || checkGameOver(g))
-            return evaluateGrid(g);
-
-        double result;
-        if (isMaxPlayer) {
-            result = -DBL_MAX;
-            for (char dir : {'i', 'j', 'k', 'l'}) {
-                if (tryMove(g, dir)) {
-                    auto newGrid = simulateMove(g, dir);
-                    result = max(result, expectimax(newGrid, depth - 1, false));
-                }
-            }
-            if (result == -DBL_MAX)
-                result = evaluateGrid(g);
-        } else {
-            // Chance node - now considering multiple possible spawn values
-            auto emptyCells = getEmptyCells(g);
-            if (emptyCells.empty())
-                return expectimax(g, depth - 1, true);
-
-            result = 0.0;
-            double cellProb = 1.0 / emptyCells.size();
-            double valueProb = 1.0 / possibleSpawnValues.size();
-
-            // For each empty cell and each possible value
-            for (const auto& pos : emptyCells) {
-                for (int value : possibleSpawnValues) {
-                    auto newGrid = g;
-                    newGrid[pos.row][pos.col] = value;
-                    result += cellProb * valueProb * expectimax(newGrid, depth - 1, true);
-                }
-            }
-        }
-
-        evalCache[cacheKey] = result;
-        return result;
-    }
+    // Implements the expectimax algorithm for decision making
+    double expectimax(const vector<vector<int>>& g, int depth, bool isMaxPlayer);
 
 public:
+    // Constructor initializes the AI with game parameters
     ExpectimaxAI(vector<vector<int>>& g, Position& pos, int size,
-                 int initialNumber, int depth, int empty)
-        : grid(g), position(pos), gridSize(size), maxDepth(depth),
-          EMPTY(empty), startNumber(initialNumber)
-    {
-        initDirectionVectors();
-        initPossibleSpawnValues();
-    }
+                 int initialNumber, int depth, int empty);
 
-    // Added method to customize decay factor
-    void setDecayFactor(double factor) {
-        const_cast<double&>(decayFactor) = factor;
-    }
+    // Customizes the decay factor for position weighting
+    void setDecayFactor(double factor);
 
-    // Update spawn values when the game configuration changes
-    void updateSpawnValues(int newStartNumber) {
-        startNumber = newStartNumber;
-        initPossibleSpawnValues();
-    }
+    // Updates spawn values when the game configuration changes
+    void updateSpawnValues(int newStartNumber);
 
-    char getBestMove() {
-        char bestMove = 'n';
-        double bestScore = -DBL_MAX;
+    // Determines and returns the best move direction
+    char getBestMove();
 
-        for (char dir : {'i', 'j', 'k', 'l'}) {
-            if (!tryMove(grid, dir)) continue;
-            auto newGrid = simulateMove(grid, dir);
-            double score = expectimax(newGrid, maxDepth - 1, false);
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = dir;
-            }
-        }
-        return bestMove;
-    }
+    // Clears the evaluation cache
+    void resetCache();
 
-    void resetCache() { evalCache.clear(); }
-
+    // Executes one AI move in the game
     bool playOneStep(GridGame* game);
 };
-
 
 #endif // EXPECTIMAXAI_H_INCLUDED
