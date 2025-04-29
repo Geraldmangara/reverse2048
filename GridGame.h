@@ -105,7 +105,7 @@ private:
 
 public:
     // Constructor that loads config and starts game
-    GridGame(const string& InputFile = "reverse2048.txt");
+    GridGame(currentNumber,gridSize);
 
     // Destructor to clean up the AIs
     ~GridGame();
