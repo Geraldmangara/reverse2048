@@ -1,6 +1,6 @@
 #include "ExpectimaxAI.h"
 #include "GridGame.h"
-
+using namespace std;
 // Initialize direction vectors for movement
 void ExpectimaxAI::initDirectionVectors()
 {

@@ -1,12 +1,11 @@
 #ifndef SMARTMERGEMAX_H_INCLUDED
 #define SMARTMERGEMAX_H_INCLUDED
 
-#include "GridGame.h"
+#include "GridGame.h"  // Include GridGame.h for Position struct and constants
 #include <vector>
 #include <algorithm>
 #include <cmath>
-#include <utility> // For std::pair, appending into output
-
+#include <utility> // For  pair
 using namespace std;
 
 /**
@@ -16,10 +15,12 @@ using namespace std;
  *        they get to creating the win value (2).
  */
 
-class SmartMergeMax {
+class SmartMergeMax
+{
 private:
-    const int EMPTY = -1;
-    const int WIN_VALUE = 2;
+    // Use constants from GridGame.h instead of redefining them
+    const int EMPTY=0;
+    const int WIN_VALUE=2;
     const vector<char> DIRECTIONS = {'w', 's', 'a', 'd'};  // up, down, left, right
     const vector<char> PREFERENCE_ORDER = {'w', 'a', 's', 'd'};  // order for tie break
 
@@ -28,16 +29,15 @@ private:
 
     // Simulate a move and count merges with weighting
     pair<vector<vector<int>>, float> simulateMoveAndCountMerges(
-        const vector<vector<int>>& grid,
-        const Position& pos,
-        char direction) const;
+                              const vector<vector<int>>& grid,
+                              const Position& pos,
+                              char direction) const;
 
     // Modified from simulateProcessMovement to count merges with weights
     float simulateProcessMovementAndCountMerges(
-        Position& pos,
-        vector<vector<int>>& grid,
-        char dir) const;
-
+                              Position& pos,
+                              vector<vector<int>>& grid,
+                              char dir) const;
 public:
     SmartMergeMax(); // Constructor
 
