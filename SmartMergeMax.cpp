@@ -1,16 +1,16 @@
 #include "SmartMergeMax.h"
 #include "GridGame.h"
 #include <iostream>
+using namespace std;
 
-SmartMergeMax::SmartMergeMax(){
-
+SmartMergeMax::SmartMergeMax() {
+    // Constructor is empty as constants are used from GridGame.h
 }
 
 // Create a copy of the grid for simulation
 vector<vector<int>> SmartMergeMax::copyGrid(const vector<vector<int>>& original) const {
     return vector<vector<int>>(original);
-
-    }
+}
 
 // Simulate a move and count merges with weighting
 pair<vector<vector<int>>, float> SmartMergeMax::simulateMoveAndCountMerges(

@@ -1,20 +1,162 @@
-/** reverse2048
- * Grid Game - reverse2048 class with two grids
- *
- * This program implements a puzzle game where players(algorithms) control two separate grids,
- * trying to merge numbers to reach the value 2. The game mechanics are similar to 2048
- * but with division instead of multiplication when merging.
- */
 #include "GridGame.h"
+#include "AlgoTester.h"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <map>
+#include <tuple>
 
-// Entry point of the program
+using namespace std;
+
+// Function to display the menu and get user choices
+void displayMenu() {
+    cout << "\n===== Reverse 2048 Algorithm Tester =====\n";
+    cout << "1. Run Competitive Tests (Win/Loss)\n";
+    cout << "2. Run Move Count Tests\n";
+    cout << "3. Run Time Per Move Tests\n";
+    cout << "4. Run All Test Types\n";
+    cout << "5. Exit\n";
+    cout << "Enter your choice: ";
+}
+
 int main() {
-    try {
-        GridGame game;
-        game.run();
-    } catch (const exception& e) {
-        cerr << "Error: " << e.what() << endl;
-        return 1;
-    }
+    // Default values
+    vector<int> defaultStartNumbers = {128, 256, 512};
+    vector<int> defaultGridSizes = {3, 4, 5};
+
+    int choice;
+
+    do {
+        displayMenu();
+        cin >> choice;
+
+        if (choice >= 1 && choice <= 4) {
+            // Ask for number of games
+            int numGames;
+            cout << "Enter number of games to run per configuration: ";
+            cin >> numGames;
+
+            // Ask for start numbers
+            vector<int> startNumbers;
+            cout << "Enter start numbers (128, 256, 512) or 0 for all: ";
+            int input;
+            cin >> input;
+
+            if (input == 0) {
+                startNumbers = defaultStartNumbers;
+            } else {
+                startNumbers.push_back(input);
+                cout << "Add another start number? (Enter number or 0 to continue): ";
+                while (cin >> input && input != 0) {
+                    startNumbers.push_back(input);
+                    cout << "Add another start number? (Enter number or 0 to continue): ";
+                }
+            }
+
+            // Ask for grid sizes
+            vector<int> gridSizes;
+            cout << "Enter grid sizes (3-5) or 0 for all: ";
+            cin >> input;
+
+            if (input == 0) {
+                gridSizes = defaultGridSizes;
+            } else {
+                gridSizes.push_back(input);
+                cout << "Add another grid size? (Enter number or 0 to continue): ";
+                while (cin >> input && input != 0) {
+                    gridSizes.push_back(input);
+                    cout << "Add another grid size? (Enter number or 0 to continue): ";
+                }
+            }
+
+            // Create tester with algorithm names
+            AlgoTester tester("SmartMergeMax", "ExpectimaxAI");
+
+            // Run tests based on choice
+            if (choice >= 1 && choice <= 3) {
+                TestType testType;
+                switch (choice) {
+                    case 1: testType = TestType::COMPETITIVE; break;
+                    case 2: testType = TestType::MOVE_COUNT; break;
+                    case 3: testType = TestType::TIME_PER_MOVE; break;
+                    default: testType = TestType::COMPETITIVE; break;
+                }
+
+                // Run tests and collect results
+                auto allResults = tester.runMultipleTests(numGames, startNumbers, gridSizes, testType);
+
+                // Generate and display summaries
+                map<tuple<int, int>, TestSummary> summaries;
+                for (const auto& pair : allResults) {
+                    TestSummary summary = tester.generateSummary(pair.second);
+                    summaries[pair.first] = summary;
+
+                    int startNumber = get<0>(pair.first);
+                    int gridSize = get<1>(pair.first);
+                    cout << "\nResults for Start Number " << startNumber << ", Grid Size " << gridSize << ":\n";
+                    tester.printSummary(summary);
+                }
+
+                // Export results to CSV files
+                string testTypeStr = tester.testTypeToString(testType);
+                string resultsFileName = "results_" + testTypeStr + ".csv";
+                string summaryFileName = "summary_" + testTypeStr + ".csv";
+
+                for (const auto& pair : allResults) {
+                    int startNumber = get<0>(pair.first);
+                    int gridSize = get<1>(pair.first);
+                    string configFileName = "results_" + testTypeStr + "_" + to_string(startNumber) + "_" + to_string(gridSize) + ".csv";
+                    tester.exportResultsToCSV(pair.second, configFileName);
+                }
+
+                tester.exportSummaryToCSV(summaries, summaryFileName);
+            } else if (choice == 4) {
+                // Run all test types
+                vector<TestType> testTypes = {
+                    TestType::COMPETITIVE,
+                    TestType::MOVE_COUNT,
+                    TestType::TIME_PER_MOVE
+                };
+
+                for (TestType testType : testTypes) {
+                    cout << "\n========== Running " << tester.testTypeToString(testType) << " Tests ==========\n";
+
+                    // Run tests and collect results
+                    auto allResults = tester.runMultipleTests(numGames, startNumbers, gridSizes, testType);
+
+                    // Generate and display summaries
+                    map<tuple<int, int>, TestSummary> summaries;
+                    for (const auto& pair : allResults) {
+                        TestSummary summary = tester.generateSummary(pair.second);
+                        summaries[pair.first] = summary;
+
+                        int startNumber = get<0>(pair.first);
+                        int gridSize = get<1>(pair.first);
+                        cout << "\nResults for Start Number " << startNumber << ", Grid Size " << gridSize << ":\n";
+                        tester.printSummary(summary);
+                    }
+
+                    // Export results to CSV files
+                    string testTypeStr = tester.testTypeToString(testType);
+                    string summaryFileName = "summary_" + testTypeStr + ".csv";
+
+                    for (const auto& pair : allResults) {
+                        int startNumber = get<0>(pair.first);
+                        int gridSize = get<1>(pair.first);
+                        string configFileName = "results_" + testTypeStr + "_" + to_string(startNumber) + "_" + to_string(gridSize) + ".csv";
+                        tester.exportResultsToCSV(pair.second, configFileName);
+                    }
+
+                    tester.exportSummaryToCSV(summaries, summaryFileName);
+                }
+            }
+
+            cout << "\nAll tests completed. Results exported to CSV files.\n";
+        } else if (choice != 5) {
+            cout << "Invalid choice. Please try again.\n";
+        }
+    } while (choice != 5);
+
+    cout << "Thank you for using the Reverse 2048 Algorithm Tester!\n";
     return 0;
 }

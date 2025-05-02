@@ -18,12 +18,12 @@ class ExpectimaxAI
 private:
     vector<vector<int>>& grid;       // Reference to the game grid
     Position& position;              // Reference to the player position
-    const int gridSize, maxDepth, EMPTY;  // Grid dimensions, search depth, and empty cell value
+    const int gridSize, maxDepth, EMPTY; // Grid dimensions, search depth, and empty cell value
     int startNumber;                 // Starting number for tile generation
     vector<int> possibleSpawnValues; // Values that can spawn on the grid
     unordered_map<string, double> evalCache; // Cache for grid evaluations
     // Decay parameters
-    const double decayFactor = 0.5;  // Controls how quickly the weight decreases
+    const double decayFactor = 0.1;  // Controls how quickly the weight decreases
 
     // Direction vector structure for movement processing
     struct DirVector
