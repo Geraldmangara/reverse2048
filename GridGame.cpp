@@ -1,103 +1,156 @@
 #include "GridGame.h"
 #include "ExpectimaxAI.h"
+#include "SmartMergeMax.h"
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <random>
+#include <algorithm>
+#include <stdexcept>
+#include <iomanip>
+#include <thread>
+#include <chrono>
+#include <utility>
+#include <cmath>
+using namespace std;
+
+// Define constants used within GridGame and potentially by AIs
+const int GridGame::EMPTY = 0;
+const int GridGame::WIN_VALUE = 2; // In reverse 2048, we want to reach 2
+const int GridGame::MIN_GRID_SIZE = 3;
+const int GridGame::MAX_GRID_SIZE = 5;
+const int GridGame::MAX_MOVES = 1000; // Move limit per AI
+// Initialize VALID_NUMBERS
+const std::vector<int> GridGame::VALID_NUMBERS = {
+    2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+};
+
 
 // Initialize possible spawn values based on the starting number
-void GridGame::initPossibleSpawnValues() {
+void GridGame::initPossibleSpawnValues()
+{
     possibleSpawnValues.clear();
-    if (currentNumber == 512) {
+    if (currentNumber == 512)
+    {
         possibleSpawnValues = {256, 128, 64};
-    } else if (currentNumber == 256) {
+    }
+    else if (currentNumber == 256)
+    {
         possibleSpawnValues = {128, 64, 32};
-    } else if (currentNumber == 128) {
+    }
+    else if (currentNumber == 128)
+    {
         possibleSpawnValues = {64, 32, 16};
-    } else {
+    }
+    else
+    {
         // Default case - just use the currentNumber
         possibleSpawnValues = {currentNumber};
     }
 }
 
 // Checks if config file values are acceptable
-void GridGame::validateConfiguration() const {
-    if (gridSize < MIN_GRID_SIZE || gridSize > MAX_GRID_SIZE) {
+void GridGame::validateConfiguration() const
+{
+    if (gridSize < MIN_GRID_SIZE || gridSize > MAX_GRID_SIZE)
+    {
         throw invalid_argument("Grid size must be between 3 and 5");
     }
-    if (find(VALID_NUMBERS.begin(), VALID_NUMBERS.end(), currentNumber) == VALID_NUMBERS.end()) {
+    if (find(VALID_NUMBERS.begin(), VALID_NUMBERS.end(), currentNumber) == VALID_NUMBERS.end())
+    {
         throw invalid_argument("Number must be 128, 256, or 512");
     }
 }
 
-// Prepares both grids and adds two numbers each
-void GridGame::initializeGrids() {
+void GridGame::initializeGrids()
+{
     grid1 = vector<vector<int>>(gridSize, vector<int>(gridSize, EMPTY));
     grid2 = vector<vector<int>>(gridSize, vector<int>(gridSize, EMPTY));
 
     // Initialize possible spawn values
     initPossibleSpawnValues();
 
-    // Random positions for the first two numbers on Grid 1
-    uniform_int_distribution<int> dist(0, gridSize - 1);
-    int row1a, col1a, row1b, col1b;
+    // Seed the random number generator with current time for better randomness
+    auto timeNow = chrono::high_resolution_clock::now().time_since_epoch().count();
+    rng.seed(random_device()() ^ static_cast<uint32_t>(timeNow));
 
+    // Create a list of all possible positions
+    vector<Position> allPositions;
+    for (int i = 0; i < gridSize; i++)
+    {
+        for (int j = 0; j < gridSize; j++)
+        {
+            allPositions.push_back({i, j});
+        }
+    }
 
-    do {
-        row1a = dist(rng);
-        col1a = dist(rng);
-        row1b = dist(rng);
-        col1b = dist(rng);
-    } while (row1a == row1b && col1a == col1b); // Ensure they’re not the same cell
+    // Shuffle all positions thoroughly
+    shuffle(allPositions.begin(), allPositions.end(), rng);
 
-    grid1[row1a][col1a] = currentNumber;
-    grid1[row1b][col1b] = currentNumber;
-    grid2[row1a][col1a] = currentNumber;
-    grid2[row1b][col1b] = currentNumber;
+    // Use the first two shuffled positions for initial tiles
+    Position pos1 = allPositions[0];
+    Position pos2 = allPositions[1];
 
-
-
+    // Place tiles at these positions
+    grid1[pos1.row][pos1.col] = currentNumber;
+    grid1[pos2.row][pos2.col] = currentNumber;
+    grid2[pos1.row][pos1.col] = currentNumber;
+    grid2[pos2.row][pos2.col] = currentNumber;
 }
 
 // Figures out where the cursor would move given a direction
-Position GridGame::calculateNewPosition(Position pos, char dir) const {
+Position GridGame::calculateNewPosition(Position pos, char dir) const
+{
     dir = tolower(dir);
     Position newPos = pos;
-    switch (dir) {
+    switch (dir)
+    {
     case 'w':
     case 'i':
-        newPos.row--;
+        newPos.row = max(0, newPos.row - 1); // Prevent going out of bounds
         break;
     case 's':
     case 'k':
-        newPos.row++;
+        newPos.row = min(gridSize - 1, newPos.row + 1); // Prevent going out of bounds
         break;
     case 'a':
     case 'j':
-        newPos.col--;
+        newPos.col = max(0, newPos.col - 1); // Prevent going out of bounds
         break;
     case 'd':
     case 'l':
-        newPos.col++;
+        newPos.col = min(gridSize - 1, newPos.col + 1); // Prevent going out of bounds
         break;
     }
     return newPos;
 }
 
 // Checks if a given grid position is within bounds
-bool GridGame::isValidPosition(Position pos) const {
+bool GridGame::isValidPosition(Position pos) const
+{
     return pos.row >= 0 && pos.row < gridSize &&
            pos.col >= 0 && pos.col < gridSize;
 }
 
 // Adds a new tile with a random value from possibleSpawnValues in an empty spot
-void GridGame::spawnRandomNumber(vector<vector<int>>& grid) {
+void GridGame::spawnRandomNumber(vector<vector<int>>& grid)
+{
     vector<Position> emptyCells;
-    for (int i = 0; i < gridSize; i++) {
-        for (int j = 0; j < gridSize; j++) {
-            if (grid[i][j] == EMPTY) {
+    for (int i = 0; i < gridSize; i++)
+    {
+        for (int j = 0; j < gridSize; j++)
+        {
+            if (grid[i][j] == EMPTY)
+            {
                 emptyCells.push_back({i, j});
             }
         }
     }
 
-    if (!emptyCells.empty()) {
+    if (!emptyCells.empty())
+    {
         uniform_int_distribution<int> cellDist(0, emptyCells.size() - 1);
         Position spawnPos = emptyCells[cellDist(rng)];
 
@@ -110,11 +163,13 @@ void GridGame::spawnRandomNumber(vector<vector<int>>& grid) {
 }
 
 // Moves tiles in a given direction and handles merging
-bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char dir) {
+bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char dir)
+{
     bool gridChanged = false;
     dir = tolower(dir);
 
-    struct MoveVector {
+    struct MoveVector
+    {
         int rowDelta;
         int colDelta;
         int startRow;
@@ -127,7 +182,8 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
 
     MoveVector moveVectors;
 
-    switch(dir) {
+    switch(dir)
+    {
     case 's':
     case 'k': // Down
         moveVectors = {1, 0, gridSize-2, -1, -1, 0, gridSize, 1};
@@ -148,32 +204,44 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
         return false;
     }
 
-    for (int row = moveVectors.startRow; row != moveVectors.endRow; row += moveVectors.rowStep) {
-        for (int col = moveVectors.startCol; col != moveVectors.endCol; col += moveVectors.colStep) {
-            if (grid[row][col] != EMPTY) {
+    for (int row = moveVectors.startRow; row != moveVectors.endRow; row += moveVectors.rowStep)
+    {
+        for (int col = moveVectors.startCol; col != moveVectors.endCol; col += moveVectors.colStep)
+        {
+            if (grid[row][col] != EMPTY)
+            {
                 int newRow = row;
                 int newCol = col;
 
-                while (true) {
+                while (true)
+                {
                     int nextRow = newRow + moveVectors.rowDelta;
                     int nextCol = newCol + moveVectors.colDelta;
 
                     if (nextRow >= 0 && nextRow < gridSize &&
                             nextCol >= 0 && nextCol < gridSize &&
                             (grid[nextRow][nextCol] == EMPTY ||
-                             grid[nextRow][nextCol] == grid[row][col])) {
+                             grid[nextRow][nextCol] == grid[row][col]))
+                    {
                         newRow = nextRow;
                         newCol = nextCol;
-                    } else {
+                    }
+                    else
+                    {
                         break;
                     }
                 }
 
-                if (newRow != row || newCol != col) {
-                    if (grid[newRow][newCol] == grid[row][col]) {
+                if (newRow != row || newCol != col)
+                {
+                    if (grid[newRow][newCol] == grid[row][col])
+                    {
+                        // For reverse 2048, we divide by 2 to get smaller numbers
                         grid[newRow][newCol] /= 2;
                         grid[row][col] = EMPTY;
-                    } else {
+                    }
+                    else
+                    {
                         grid[newRow][newCol] = grid[row][col];
                         grid[row][col] = EMPTY;
                     }
@@ -183,9 +251,11 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
         }
     }
 
-    if (gridChanged) {
+    if (gridChanged)
+    {
         Position newPos = calculateNewPosition(pos, dir);
-        if (isValidPosition(newPos)) {
+        if (isValidPosition(newPos))
+        {
             pos = newPos;
         }
         spawnRandomNumber(grid);
@@ -196,19 +266,28 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
 }
 
 // Checks if the game has reached a win or stalemate for a grid
-bool GridGame::checkGameOver(const vector<vector<int>>& grid) const {
-    for (int i = 0; i < gridSize; i++) {
-        for (int j = 0; j < gridSize; j++) {
-            if (grid[i][j] == 2) {
-                return true;
+bool GridGame::checkGameOver(const vector<vector<int>>& grid) const
+{
+    // Check for win condition (tile with value 2)
+    for (int i = 0; i < gridSize; i++)
+    {
+        for (int j = 0; j < gridSize; j++)
+        {
+            if (grid[i][j] == WIN_VALUE)
+            {
+                return true; // Win condition
             }
         }
     }
 
+    // Check if grid is full
     bool gridFull = true;
-    for (int i = 0; i < gridSize; i++) {
-        for (int j = 0; j < gridSize; j++) {
-            if (grid[i][j] == EMPTY) {
+    for (int i = 0; i < gridSize; i++)
+    {
+        for (int j = 0; j < gridSize; j++)
+        {
+            if (grid[i][j] == EMPTY)
+            {
                 gridFull = false;
                 break;
             }
@@ -216,222 +295,350 @@ bool GridGame::checkGameOver(const vector<vector<int>>& grid) const {
         if (!gridFull) break;
     }
 
-    if (gridFull) {
-        for (int i = 0; i < gridSize; i++) {
-            for (int j = 0; j < gridSize - 1; j++) {
-                if (grid[i][j] == grid[i][j+1]) {
-                    return false;
+    if (gridFull)
+    {
+        // Check if any adjacent tiles can be merged
+        for (int i = 0; i < gridSize; i++)
+        {
+            for (int j = 0; j < gridSize - 1; j++)
+            {
+                if (grid[i][j] == grid[i][j+1])
+                {
+                    return false; // Merge is possible, game not over
                 }
             }
         }
 
-        for (int j = 0; j < gridSize; j++) {
-            for (int i = 0; i < gridSize - 1; i++) {
-                if (grid[i][j] == grid[i+1][j]) {
-                    return false;
+        for (int j = 0; j < gridSize; j++)
+        {
+            for (int i = 0; i < gridSize - 1; i++)
+            {
+                if (grid[i][j] == grid[i+1][j])
+                {
+                    return false; // Merge is possible, game not over
                 }
             }
         }
 
-        return true;
+        return true; // Grid is full and no merges possible
     }
 
-    return false;
+    return false; // Grid not full, game not over
 }
 
 // Constructor that loads config and starts game
-GridGame::GridGame(const string& InputFile) : rng(random_device()()) {
-    ifstream file(InputFile);
-    if(!file) {
-        cout<<"Error: Please input the right config file. Look at the documentation and the readmefile(reverse2048)!"<<endl;
-    }
-
-    file >> currentNumber >> gridSize;
+GridGame::GridGame(int currentNumber, int gridSize) :
+    currentNumber(currentNumber),
+    gridSize(gridSize),
+    rng(random_device()()),
+    grid1GameOver(false),
+    grid2GameOver(false),
+    lastMoveGrid1(' '),
+    lastMoveGrid2(' '),
+    isFirstDisplay(true),
+    grid1Reason(GameOverReason::NOT_OVER),
+    grid2Reason(GameOverReason::NOT_OVER),
+    Ai1Count(0),
+    Ai2Count(0)
+{
     validateConfiguration();
     initializeGrids();
-    Ai2Count=0;
-    pos1={0,0};
-    pos2={0,0};
 
-    // the biggest line of code. My magnum opus
-    ai = new ExpectimaxAI(grid2, pos2, gridSize, currentNumber, 7, EMPTY);
+    // Initialize game state tracking variables
+    pos1 = {0, 0};
+    pos2 = {0, 0};
+
+    // Initialize AIs
+    ai1 = new SmartMergeMax();
+    ai2 = new ExpectimaxAI(grid2, pos2, gridSize, currentNumber, 4, EMPTY);
 }
 
-// Destructor to clean up the AI
-GridGame::~GridGame() {
-    if (ai) delete ai;
+// Destructor to clean up the AIs
+GridGame::~GridGame()
+{
+    if (ai1) delete ai1;
+    if (ai2) delete ai2;
 }
 
-void GridGame::handleInput(char input) {
-    input = tolower(input);
+
+// Convert direction char to readable string
+string GridGame::directionToString(char dir) const
+{
+    switch(tolower(dir))
+    {
+    case 'w':
+    case 'i':
+        return "U";
+    case 's':
+    case 'k':
+        return "D";
+    case 'a':
+    case 'j':
+        return "L";
+    case 'd':
+    case 'l':
+        return "R";
+    default:
+        return "";
+    }
+}
+
+
+
+
+// Checks if one of the algorithm has won
+bool GridGame::hasWon(const vector<vector<int>>& grid) const
+{
+    for (int i = 0; i < gridSize; i++)
+    {
+        for (int j = 0; j < gridSize; j++)
+        {
+            if (grid[i][j] == WIN_VALUE)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Let the AI for grid 1 play one step
+bool GridGame::ai1PlayOneStep()
+{
+    if (grid1GameOver)
+    {
+        return false;
+    }
+
+    // Get best move from SmartMergeMax AI
+    char bestMove = ai1->getBestMove(grid1, pos1);
+    lastMoveGrid1 = bestMove;
+
+    // Execute the move
+    bool validMove = processMovement(pos1, grid1, bestMove);
+    if (validMove)
+    {
+
+        Ai1Count++;
+        isFirstDisplay = false;
+
+        if (checkGameOver(grid1))
+        {
+            grid1GameOver = true;
+            // Check specifically for win condition
+            if (hasWon(grid1)) {
+                grid1Reason = GameOverReason::WIN;
+            } else {
+                grid1Reason = GameOverReason::STALEMATE_BOARD_FULL; // Assuming board full stalemate if not a win
+            }
+        }
+    }
+    else
+    {
+        // If no valid move, game is over for this grid
+        grid1GameOver = true;
+        grid1Reason = GameOverReason::STALEMATE_NO_MOVES; // Use specific reason
+    }
+
+    return validMove;
+}
+
+// Let the AI for grid 2 play one step
+bool GridGame::ai2PlayOneStep()
+{
+    if (grid2GameOver)
+    {
+        return false;
+    }
+
+    // Reset cache for AI2 (ExpectimaxAI)
+    ai2->resetCache();
+
+    // Let AI2 play one step
+    bool validMove = ai2->playOneStep(this);
+
+    if (validMove)
+    {
+        Ai2Count++;
+        isFirstDisplay = false;
+
+        if (checkGameOver(grid2))
+        {
+            grid2GameOver = true;
+            // Check specifically for win condition
+            if (hasWon(grid2)) {
+                grid2Reason = GameOverReason::WIN;
+            } else {
+                grid2Reason = GameOverReason::STALEMATE_BOARD_FULL; // Assuming board full stalemate if not a win
+            }
+        }
+    }
+    else
+    {
+        // If no valid move, game is over for this grid
+        grid2GameOver = true;
+        grid2Reason = GameOverReason::STALEMATE_NO_MOVES; // Use specific reason
+    }
+
+    return validMove;
+}
+
+// Let both AIs play one step
+bool GridGame::aiPlayOneStep()
+{
     bool gridChanged = false;
 
-    const string grid1Controls = "wasd";
-    const string grid2Controls = "ijkl";
+    // Let AI1 play on Grid 1
+    if (!grid1GameOver)
+    {
+        bool grid1Changed = ai1PlayOneStep(); // ai1PlayOneStep handles its own game over check
+        gridChanged = gridChanged || grid1Changed;
+    }
 
-    if (input == 'q') return;
+    // Let AI2 play on Grid 2
+    if (!grid2GameOver)
+    {
+        ai2->resetCache(); // Reset cache before AI2's turn
+        bool grid2Changed = ai2PlayOneStep(); // ai2PlayOneStep handles its own game over check
+        gridChanged = gridChanged || grid2Changed;
+    }
 
-    if (grid1Controls.find(input) != string::npos) {
-        gridChanged = processMovement(pos1, grid1, input);
+    // After both AIs have attempted a move, check for opponent winning
+    if (grid1Reason == GameOverReason::WIN && !grid2GameOver) {
+        grid2GameOver = true;
+        grid2Reason = GameOverReason::OPPONENT_WON;
+    }
+    if (grid2Reason == GameOverReason::WIN && !grid1GameOver) {
+        grid1GameOver = true;
+        grid1Reason = GameOverReason::OPPONENT_WON;
+    }
 
-        if (checkGameOver(grid1)) {
-            displayGameState();
-            cout << "\nGame Over for Grid 1! ";
-            for (int i = 0; i < gridSize; i++) {
-                for (int j = 0; j < gridSize; j++) {
-                    if (grid1[i][j] == 2) {
-                        cout << "You won by reaching 2!\n";
-                        return;
-                    }
-                }
-            }
-            cout << "No more moves possible.\n";
-            return;
+    return gridChanged; // Return true if at least one grid changed
+}
+
+// Plays the game automatically using AIs until one finishes or limit reached.
+// Returns a GameResult structure containing the outcome details and history.
+GameResult GridGame::aiPlayUntilGameOver()
+{
+    // Clear history for the new game
+    gameHistory.clear();
+
+    // Store the initial state
+    gameHistory.push_back({grid1, grid2, ' ', ' ', 0}); // Step 0 for initial state
+
+    int moveNumber = 0;
+    while (!grid1GameOver || !grid2GameOver)
+    {
+
+
+        // Play one step for both AIs (if not already over)
+        bool movedThisTurn = aiPlayOneStep();
+
+        // Increment move number and store history if any grid changed
+        if (movedThisTurn) {
+      char move1Before = lastMoveGrid1;
+        char move2Before = lastMoveGrid2;
+            moveNumber++;
+            // Store the state after this move
+            gameHistory.push_back({grid1, grid2, move1Before, move2Before, moveNumber});
         }
-    } else if (grid2Controls.find(input) != string::npos) {
-        gridChanged = processMovement(pos2, grid2, input);
 
-        if (checkGameOver(grid2)) {
-            displayGameState();
-            cout << "\nGame Over for Grid 2! ";
-            for (int i = 0; i < gridSize; i++) {
-                for (int j = 0; j < gridSize; j++) {
-                    if (grid2[i][j] == 2) {
-                        cout << "AI won by reaching 2!\n";
-                        return;
-                    }
-                }
-            }
-            cout << "No more moves possible for AI.\n";
-            return;
+        // Check for move limit after each step
+        if (!grid1GameOver && Ai1Count >= MAX_MOVES) {
+            grid1GameOver = true;
+            grid1Reason = GameOverReason::MOVE_LIMIT_REACHED;
+        }
+        if (!grid2GameOver && Ai2Count >= MAX_MOVES) {
+            grid2GameOver = true;
+            grid2Reason = GameOverReason::MOVE_LIMIT_REACHED;
+        }
+
+        // Check if both games are now over
+        if (grid1GameOver && grid2GameOver) {
+            break; // Exit loop if both games finished
         }
     }
 
-    if (gridChanged) {
-        displayGameState();
-    } else if (input != 'q') {
-        cout << "Invalid move!\n";
-    }
+    // Game is over, populate and return the GameResult
+    return GameResult(currentNumber, gridSize, grid1Reason, grid2Reason, Ai1Count, Ai2Count, gameHistory);
 }
 
-// Prints out both grids side-by-side with current number
-void GridGame::displayGameState() const {
-    // Header
-    cout << "---------------------------------------------------------------------\n";
-    cout << "Game 1: reverse 512 (" << gridSize << " x " << gridSize << ") - Initial Board\n";
-    cout << "---------------------------------------------------------------------\n";
 
-    // Display both grids side by side
-    for (int row = 0; row < gridSize; ++row) {
-        // Grid 1 (Human)
-        cout << "|";
-        for (int col = 0; col < gridSize; ++col) {
-            if (grid1[row][col] == EMPTY)
-                cout << setw(5) << " - ";
-            else
-                cout << setw(5) << grid1[row][col];
-        }
-        cout << " |"; // Close Grid 1
-
-        cout << "     "; // Space between the two grids
-
-        // Grid 2 (AI)
-        cout << "|";
-        for (int col = 0; col < gridSize; ++col) {
-            if (grid2[row][col] == EMPTY)
-                cout << setw(5) << " - ";
-            else
-                cout << setw(5) << grid2[row][col];
-        }
-        cout << " |"; // Close Grid 2
-
-        cout << "\n";
+// Getter method for processMovement to be accessible by the AIs
+bool GridGame::performProcessMovement(Position& pos, vector<vector<int>>& grid, char dir)
+{
+    if (&grid == &grid1) {
+        lastMoveGrid1 = dir;
+    } else if (&grid == &grid2) {
+        lastMoveGrid2 = dir;
     }
 
-    // Bottom border
-    cout <<"---------------------------------------------------------------------\n";
-}
-
-
-// Shows movement keys to the player
-void GridGame::showControls() const {
-    cout << "\nControls:\n"
-         << "WASD - Move Grid 1 (Human)\n"
-         << "IJKL - Move Grid 2 (AI is controlling this grid)\n"
-         << "Q - Quit\n"
-         << "A - Let AI play one step\n"
-         << "P - Let AI play until game over\n\n";
-}
-
-// Let the AI play one step
-bool GridGame::aiPlayOneStep() {
-    ai->resetCache(); // cashing system, resets after a move to get new calculations
-    return ai->playOneStep(this);
-}
-
-// Let the AI play until game over
-void GridGame::aiPlayUntilGameOver() {
-    cout << "AI playing automatically. Press Ctrl+C to stop.\n";
-
-    bool gameEnded = false;
-    Ai2Count=0;
-    while (!gameEnded) {
-        ai->resetCache();
-        bool validMove = ai->playOneStep(this);
-        if(validMove){
-            Ai2Count++;
-        }
-
-        if (!validMove) {
-            cout << "AI has no valid moves left.\n";
-            gameEnded = true;
-        }
-
-        if (checkGameOver(grid2)) {
-            displayGameState();
-            cout << "\nGame Over for Grid 2 (AI)! ";
-            for (int i = 0; i < gridSize; i++) {
-                for (int j = 0; j < gridSize; j++) {
-                    if (grid2[i][j] == 2) {
-                        cout << "I love beating idiots like you \n";
-                        cout << " Expectimax Ai beat you with "<<Ai2Count<<" moves.";
-                        return;
-                    }
-                }
-            }
-            cout << "No more moves possible.\n";
-            return;
-        }
-
-        // delay stuff
-        this_thread::sleep_for(chrono::milliseconds(300));
-    }
-}
-
-// Starts the main game loop
-void GridGame::run() {
-    showControls();
-    displayGameState();
-
-    char input;
-    do {
-        cout << "> ";
-        cin >> input;
-
-        input = tolower(input);
-
-        // input stuff
-        if (input == 'a') {
-            aiPlayOneStep();
-        } else if (input =='p') {
-            aiPlayUntilGameOver();
-        } else {
-            handleInput(input);
-        }
-    } while (tolower(input) != 'q');
-}
-
-
-bool GridGame::performProcessMovement(Position& pos, vector<vector<int>>& grid, char dir) {
     return processMovement(pos, grid, dir);
+}
+
+// Get string description of game over reason
+string GridGame::getReasonString(GameOverReason reason, int moveCount) const {
+    switch (reason) {
+        case GameOverReason::NOT_OVER:
+            return "Not Over";
+        case GameOverReason::WIN:
+            return "Win";
+        case GameOverReason::STALEMATE_BOARD_FULL:
+            return "Board Full";
+        case GameOverReason::STALEMATE_NO_MOVES:
+            return "No Valid Moves";
+        case GameOverReason::MOVE_LIMIT_REACHED:
+             return "Move Limit Reached (" + to_string(moveCount) + " moves)";
+        case GameOverReason::OPPONENT_WON:
+             return "Opponent Won";
+        default:
+            return "Unknown";
+    }
+}
+
+GameOverReason GridGame::checkGameOverReason(const vector<vector<int>>& grid) const {
+    // Check for win condition (tile with value 2)
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            if (grid[i][j] == WIN_VALUE) {
+                return GameOverReason::WIN;
+            }
+        }
+    }
+
+    // Check for any empty cells
+    bool hasEmpty = false;
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            if (grid[i][j] == EMPTY) {
+                hasEmpty = true;
+                break;
+            }
+        }
+        if (hasEmpty) break;
+    }
+
+    // If there are empty cells, check if moves are possible
+    if (hasEmpty) {
+        return GameOverReason::NOT_OVER; // If there are empty cells, moves are still possible
+    } else {
+        // Board is full, check for possible merges
+        for (int i = 0; i < gridSize; ++i) {
+            for (int j = 0; j < gridSize - 1; ++j) {
+                if (grid[i][j] == grid[i][j+1]) {
+                    return GameOverReason::NOT_OVER; // Horizontal merge possible
+                }
+            }
+        }
+
+        for (int j = 0; j < gridSize; ++j) {
+            for (int i = 0; i < gridSize - 1; ++i) {
+                if (grid[i][j] == grid[i+1][j]) {
+                    return GameOverReason::NOT_OVER; // Vertical merge possible
+                }
+            }
+        }
+
+        return GameOverReason::STALEMATE_BOARD_FULL;
+    }
 }
