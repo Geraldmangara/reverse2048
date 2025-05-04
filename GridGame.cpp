@@ -16,19 +16,20 @@
 #include <cmath>
 using namespace std;
 
-// Define constants used within GridGame and potentially by AIs
+
 const int GridGame::EMPTY = 0;
-const int GridGame::WIN_VALUE = 2; // In reverse 2048, we want to reach 2
+const int GridGame::WIN_VALUE = 2; 
 const int GridGame::MIN_GRID_SIZE = 3;
 const int GridGame::MAX_GRID_SIZE = 5;
 const int GridGame::MAX_MOVES = 1000; // Move limit per AI
-// Initialize VALID_NUMBERS
+
+
 const std::vector<int> GridGame::VALID_NUMBERS = {
     2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
 };
 
 
-// Initialize possible spawn values based on the starting number
+
 void GridGame::initPossibleSpawnValues()
 {
     possibleSpawnValues.clear();
@@ -51,7 +52,7 @@ void GridGame::initPossibleSpawnValues()
     }
 }
 
-// Checks if config file values are acceptable
+// Checks if config file values are acceptable.not so sure if there will be a situation where this might occur but it is good coding practice
 void GridGame::validateConfiguration() const
 {
     if (gridSize < MIN_GRID_SIZE || gridSize > MAX_GRID_SIZE)
@@ -64,15 +65,15 @@ void GridGame::validateConfiguration() const
     }
 }
 
-void GridGame::initializeGrids()
+void GridGame::initialiseGrids()
 {
     grid1 = vector<vector<int>>(gridSize, vector<int>(gridSize, EMPTY));
     grid2 = vector<vector<int>>(gridSize, vector<int>(gridSize, EMPTY));
 
-    // Initialize possible spawn values
+    //Initialise possible spawn values
     initPossibleSpawnValues();
 
-    // Seed the random number generator with current time for better randomness
+    // The best possible seed from research
     auto timeNow = chrono::high_resolution_clock::now().time_since_epoch().count();
     rng.seed(random_device()() ^ static_cast<uint32_t>(timeNow));
 
@@ -342,13 +343,13 @@ GridGame::GridGame(int currentNumber, int gridSize) :
     Ai2Count(0)
 {
     validateConfiguration();
-    initializeGrids();
+    initialiseGrids();
 
-    // Initialize game state tracking variables
+    // initialise game state tracking variables
     pos1 = {0, 0};
     pos2 = {0, 0};
 
-    // Initialize AIs
+    // initialise AIs
     ai1 = new SmartMergeMax();
     ai2 = new ExpectimaxAI(grid2, pos2, gridSize, currentNumber, 4, EMPTY);
 }
@@ -386,7 +387,7 @@ string GridGame::directionToString(char dir) const
 
 
 
-// Checks if one of the algorithm has won
+// Checks if one of the algorithms has won
 bool GridGame::hasWon(const vector<vector<int>>& grid) const
 {
     for (int i = 0; i < gridSize; i++)
@@ -425,7 +426,7 @@ bool GridGame::ai1PlayOneStep()
         if (checkGameOver(grid1))
         {
             grid1GameOver = true;
-            // Check specifically for win condition
+            // The enums work well for resulting logic so it was definately a good choice
             if (hasWon(grid1)) {
                 grid1Reason = GameOverReason::WIN;
             } else {
@@ -443,7 +444,7 @@ bool GridGame::ai1PlayOneStep()
     return validMove;
 }
 
-// Let the AI for grid 2 play one step
+// Not necessary, but used for testing
 bool GridGame::ai2PlayOneStep()
 {
     if (grid2GameOver)
@@ -503,7 +504,7 @@ bool GridGame::aiPlayOneStep()
         gridChanged = gridChanged || grid2Changed;
     }
 
-    // After both AIs have attempted a move, check for opponent winning
+    // Basically checking conditions for a resulting win or loss
     if (grid1Reason == GameOverReason::WIN && !grid2GameOver) {
         grid2GameOver = true;
         grid2Reason = GameOverReason::OPPONENT_WON;
@@ -516,7 +517,7 @@ bool GridGame::aiPlayOneStep()
     return gridChanged; // Return true if at least one grid changed
 }
 
-// Plays the game automatically using AIs until one finishes or limit reached.
+// Plays the game automatically using AIs until one finishes or limit reached, one of the constraints.
 // Returns a GameResult structure containing the outcome details and history.
 GameResult GridGame::aiPlayUntilGameOver()
 {
@@ -555,22 +556,22 @@ GameResult GridGame::aiPlayUntilGameOver()
 
         // Check if both games are now over
         if (grid1GameOver && grid2GameOver) {
-            break; // Exit loop if both games finished
+            break; 
         }
     }
 
-    // Game is over, populate and return the GameResult
+    // Game is over, populate and return the GameResult. Super powerful, the use of these objects will be used in the printing of the board
     return GameResult(currentNumber, gridSize, grid1Reason, grid2Reason, Ai1Count, Ai2Count, gameHistory);
 }
 
 
-// Getter method for processMovement to be accessible by the AIs
+// Getter method. Legacy code from manual control, way too difficult to remove so a made a getter to proccessMovement
 bool GridGame::performProcessMovement(Position& pos, vector<vector<int>>& grid, char dir)
 {
     if (&grid == &grid1) {
         lastMoveGrid1 = dir;
     } else if (&grid == &grid2) {
-        lastMoveGrid2 = dir;
+        lastMoveGrid2 = dir; 
     }
 
     return processMovement(pos, grid, dir);
@@ -597,7 +598,7 @@ string GridGame::getReasonString(GameOverReason reason, int moveCount) const {
 }
 
 GameOverReason GridGame::checkGameOverReason(const vector<vector<int>>& grid) const {
-    // Check for win condition (tile with value 2)
+    //Should have been used for the ExpectimaxAI, an additional reccomendation
     for (int i = 0; i < gridSize; ++i) {
         for (int j = 0; j < gridSize; ++j) {
             if (grid[i][j] == WIN_VALUE) {
