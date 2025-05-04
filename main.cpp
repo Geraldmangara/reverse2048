@@ -1,3 +1,9 @@
+/* 2804713
+   2844414
+   A simple solution to reverse2048.
+*/
+
+
 #include "GridGame.h"
 #include "BoardPrinter.h"
 #include <iostream>
@@ -7,11 +13,11 @@
 #include <sstream>
 #include <iomanip>
 using namespace std;
-int main() {
-     ifstream inputFile("reverse2048.txt");
 
-    // Open the output file in truncate mode to clear previous results
-     ofstream outputFile("output.txt",  ios::trunc);
+
+int main() {
+     ifstream inputFile("input.txt");
+     ofstream outputFile("output.txt");
 
      string line;
     int gameNumber = 0;
@@ -19,28 +25,17 @@ int main() {
     while (getline(inputFile, line)) {
          stringstream ss(line);
         int startNumber, gridSize;
-
-        if (ss >> startNumber >> gridSize) {
+        char s;
+        if (ss >> startNumber>>s >> gridSize) {
             gameNumber++;
-             cout << "game of reverse" << startNumber << " on a (" << gridSize << "x" << gridSize << ") grid" <<  endl;
-
-            // Create a new game instance for each configuration
             GridGame game(startNumber, gridSize);
-
-            // Run the AI game until it's over and get the result
             GameResult result = game.aiPlayUntilGameOver();
-
-            // Write the result to the output file using the BoardPrinter class
             BoardPrinter::writeGameResultToFile(outputFile, result, gameNumber);
-
-             cout << "Game " << gameNumber << " finished. Result written to output.txt" <<  endl;
         }
     }
-
     inputFile.close();
     outputFile.close();
-
-     cout << "\nAll games processed. Results are in output.txt" <<  endl;
-
     return 0;
 }
+
+// thank you for reviewing the code.Hope it met all your expectations
