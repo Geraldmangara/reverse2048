@@ -1,6 +1,5 @@
 #include "BoardPrinter.h"
 #include <sstream>
-
 void BoardPrinter::printGrid( ostream& os, const  vector< vector<int>>& grid, int gridSize)
 {
     for (int i = 0; i < gridSize; ++i) {
@@ -14,7 +13,6 @@ void BoardPrinter::printGrid( ostream& os, const  vector< vector<int>>& grid, in
         os << " |";
     }
 }
-
 void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult& result, int gameNumber)
 {
     outputFile << "=========================================================================" <<  endl;
@@ -38,8 +36,7 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
             case GameOverReason::OPPONENT_WON: reason1Str = "Opponent Won"; break;
             default: reason1Str = "Unknown"; break;
         }
-
-        switch (result.grid2Reason) {
+       switch (result.grid2Reason) {
             case GameOverReason::STALEMATE_BOARD_FULL: reason2Str = "Board Full"; break;
             case GameOverReason::STALEMATE_NO_MOVES: reason2Str = "No Valid Moves"; break;
             case GameOverReason::MOVE_LIMIT_REACHED: reason2Str = "Move Limit Reached (" +  to_string(result.ai2MoveCount) + " moves)"; break;
@@ -52,13 +49,14 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
     }
 
     // Print history only for winning games 
-    if (ai1Won || ai2Won) {
+if (ai1Won || ai2Won) {
         for (const auto& step : result.history) {
             // Write step header (Initial Board or Move #)
             if (step.stepNumber == 0) {
                 outputFile << "  Initial Board" <<  endl;
                 outputFile << "------------------------------------------------------------------------------------" <<  endl;
-            } else {
+            } 
+else {
                 // directionToString logic here for move characters
                 char move1 = tolower(step.move1);
                 char move2 = tolower(step.move2);
@@ -73,7 +71,7 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
                 }
 
                 switch(move2) {
-                    case 'w': case 'i': move2Str = "U"; break;
+                    case 'w': case 'i': move2Str = "U";break;
                     case 's': case 'k': move2Str = "D"; break;
                     case 'a': case 'j': move2Str = "L"; break;
                     case 'd': case 'l': move2Str = "R"; break;
@@ -83,8 +81,6 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
                 outputFile << "Move " << step.stepNumber << ": Alg_1:  " << move1Str
                            <<  setw(result.gridSize) << "     " << "             Alg_2: " << move2Str <<  endl;
             }
-
-            // printing
             for (int i = 0; i < result.gridSize; ++i) {
                 // Grid 1
                 outputFile << "|";
@@ -114,17 +110,19 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
             outputFile << "-----------------------------------------------------------------------\n";
         }
     }
-
-    if (ai1Won && !ai2Won) {
+if (ai1Won && !ai2Won) {
         outputFile << "Winner: Alg 1, total moves " << result.ai1MoveCount <<  endl;
-    } else if (!ai1Won && ai2Won) {
+    } 
+else if (!ai1Won && ai2Won) {
         outputFile << "Winner: Alg 2, total moves " << result.ai2MoveCount <<  endl;
-    } else if (ai1Won && ai2Won) {
+    }
+else if (ai1Won && ai2Won) {
         // Because the game will run both Ais until completion, and for testing conditions, print out a winner by the move number
-        if (result.ai1MoveCount <= result.ai2MoveCount) {
+ if (result.ai1MoveCount <= result.ai2MoveCount) {
             outputFile << "Winner: Alg 1 (reached win in " << result.ai1MoveCount << " moves)" <<  endl;
-        } else {
-            outputFile << "Winner: Alg 2 (reached win in " << result.ai2MoveCount << " moves)" <<  endl;
+        }
+ else {
+    outputFile << "Winner: Alg 2 (reached win in " << result.ai2MoveCount << " moves)" <<  endl;
         }
     }
     
