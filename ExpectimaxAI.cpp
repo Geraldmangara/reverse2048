@@ -137,12 +137,12 @@ vector<Position> ExpectimaxAI::getEmptyCells(const vector<vector<int>>& g) const
     return emptyCells;
 }
 
-// Check if the grid has a value of 1 (win condition)
-bool ExpectimaxAI::hasValueOne(const vector<vector<int>>& g) const
+// Checks if grid has met the win condition of 2
+bool ExpectimaxAI::hasValueTwo(const vector<vector<int>>& g) const
 {
     for (int i = 0; i < gridSize; i++)
         for (int j = 0; j < gridSize; j++)
-            if (g[i][j] == 1)
+            if (g[i][j] == 2)
                 return true;
     return false;
 }
@@ -150,7 +150,7 @@ bool ExpectimaxAI::hasValueOne(const vector<vector<int>>& g) const
 // Check if the game is over (no valid moves)
 bool ExpectimaxAI::checkGameOver(const vector<vector<int>>& g) const
 {
-    if (hasValueOne(g)) return true;
+    if (hasValueTwo(g)) return true;
 
     // Check for empty cells
     for (int i = 0; i < gridSize; i++)
@@ -174,7 +174,7 @@ bool ExpectimaxAI::checkGameOver(const vector<vector<int>>& g) const
 // Evaluate the grid state
 double ExpectimaxAI::evaluateGrid(const vector<vector<int>>& g) const
 {
-    if (hasValueOne(g)) return DBL_MAX;
+    if (hasValueTwo(g)) return DBL_MAX;
 
     double score = 0.0;
     int emptyCells = 0;
@@ -222,7 +222,7 @@ double ExpectimaxAI::expectimax(const vector<vector<int>>& g, int depth, bool is
         return evalCache[cacheKey];
 
     // Terminal conditions
-    if (hasValueOne(g)) return DBL_MAX;
+    if (hasValueTwo(g)) return DBL_MAX;
     if (depth == 0 || checkGameOver(g))
         return evaluateGrid(g);
 
