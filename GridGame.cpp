@@ -18,13 +18,13 @@ using namespace std;
 
 
 const int GridGame::EMPTY = 0;
-const int GridGame::WIN_VALUE = 2; 
+const int GridGame::WIN_VALUE = 2;
 const int GridGame::MIN_GRID_SIZE = 3;
 const int GridGame::MAX_GRID_SIZE = 5;
 const int GridGame::MAX_MOVES = 1000; // Move limit per AI
 
 
-const std::vector<int> GridGame::VALID_NUMBERS = {
+const vector<int> GridGame::VALID_NUMBERS = {
     2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
 };
 
@@ -73,7 +73,7 @@ void GridGame::initialiseGrids()
     //Initialise possible spawn values
     initPossibleSpawnValues();
 
-    // The best possible seed from research
+    // The best possible seeding method from research
     auto timeNow = chrono::high_resolution_clock::now().time_since_epoch().count();
     rng.seed(random_device()() ^ static_cast<uint32_t>(timeNow));
 
@@ -182,29 +182,33 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
     };
 
     MoveVector moveVectors;
-
+// Two different boards would need two different inputs. this thought process is used for the return direction of AI
+// wasd(w-up;a-left;s-down;d-right) ijkl(i-up;j-left;k-down;l-right)
     switch(dir)
     {
     case 's':
-    case 'k': // Down
+    case 'k':
         moveVectors = {1, 0, gridSize-2, -1, -1, 0, gridSize, 1};
         break;
     case 'w':
-    case 'i': // Up
+    case 'i':
         moveVectors = {-1, 0, 1, gridSize, 1, 0, gridSize, 1};
         break;
     case 'a':
-    case 'j': // Left
+    case 'j':
         moveVectors = {0, -1, 0, gridSize, 1, 1, gridSize, 1};
         break;
     case 'd':
-    case 'l': // Right
+    case 'l':
         moveVectors = {0, 1, 0, gridSize, 1, gridSize-2, -1, -1};
         break;
     default:
         return false;
     }
-
+/*
+this for loop iterates through the whole grid, if a tile is non-empty->move in specified direction
+if the is an empty tile-> non-empty should populate the space
+*/
     for (int row = moveVectors.startRow; row != moveVectors.endRow; row += moveVectors.rowStep)
     {
         for (int col = moveVectors.startCol; col != moveVectors.endCol; col += moveVectors.colStep)
@@ -232,12 +236,15 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
                         break;
                     }
                 }
-
+/*
+Merge if equal tiles are in the same row and divide by two and/or
+ move to a new space, old space becomes empty
+*/
                 if (newRow != row || newCol != col)
                 {
                     if (grid[newRow][newCol] == grid[row][col])
                     {
-                        // For reverse 2048, we divide by 2 to get smaller numbers
+
                         grid[newRow][newCol] /= 2;
                         grid[row][col] = EMPTY;
                     }
@@ -251,7 +258,9 @@ bool GridGame::processMovement(Position& pos, vector<vector<int>>& grid, char di
             }
         }
     }
-
+/*
+check grids and change the position
+*/
     if (gridChanged)
     {
         Position newPos = calculateNewPosition(pos, dir);
@@ -327,7 +336,8 @@ bool GridGame::checkGameOver(const vector<vector<int>>& grid) const
     return false; // Grid not full, game not over
 }
 
-// Constructor that loads config and starts game
+/* This is basically the constructor. It runs and holds the game logic, and holds the objects and counters
+*/
 GridGame::GridGame(int currentNumber, int gridSize) :
     currentNumber(currentNumber),
     gridSize(gridSize),
@@ -354,7 +364,7 @@ GridGame::GridGame(int currentNumber, int gridSize) :
     ai2 = new ExpectimaxAI(grid2, pos2, gridSize, currentNumber, 4, EMPTY);
 }
 
-// Destructor to clean up the AIs
+
 GridGame::~GridGame()
 {
     if (ai1) delete ai1;
@@ -362,7 +372,10 @@ GridGame::~GridGame()
 }
 
 
-// Convert direction char to readable string
+/*
+Convert direction char to readable string. This logic was implemented at the start of development
+There are better ways to implement this. An additional reccomendation
+*/
 string GridGame::directionToString(char dir) const
 {
     switch(tolower(dir))
@@ -426,11 +439,11 @@ bool GridGame::ai1PlayOneStep()
         if (checkGameOver(grid1))
         {
             grid1GameOver = true;
-            // The enums work well for resulting logic so it was definately a good choice
+            // The enums work well for resulting logic so it was definetly a good choice
             if (hasWon(grid1)) {
                 grid1Reason = GameOverReason::WIN;
             } else {
-                grid1Reason = GameOverReason::STALEMATE_BOARD_FULL; // Assuming board full stalemate if not a win
+                grid1Reason = GameOverReason::STALEMATE_BOARD_FULL;
             }
         }
     }
@@ -444,7 +457,7 @@ bool GridGame::ai1PlayOneStep()
     return validMove;
 }
 
-// Not necessary, but used for testing
+// Not necessary, but was used for testing and can be beneficial for future iterations if indivisual grids want to be used
 bool GridGame::ai2PlayOneStep()
 {
     if (grid2GameOver)
@@ -556,22 +569,24 @@ GameResult GridGame::aiPlayUntilGameOver()
 
         // Check if both games are now over
         if (grid1GameOver && grid2GameOver) {
-            break; 
+            break;
         }
     }
 
-    // Game is over, populate and return the GameResult. Super powerful, the use of these objects will be used in the printing of the board
+    /*
+    Made this function simplify object calling into board printer
+    */
     return GameResult(currentNumber, gridSize, grid1Reason, grid2Reason, Ai1Count, Ai2Count, gameHistory);
 }
 
 
-// Getter method. Legacy code from manual control, way too difficult to remove so a made a getter to proccessMovement
+// Getter method. Legacy code from manual control, way too difficult to remove so made a public wrapper to proccessMovement
 bool GridGame::performProcessMovement(Position& pos, vector<vector<int>>& grid, char dir)
 {
     if (&grid == &grid1) {
         lastMoveGrid1 = dir;
     } else if (&grid == &grid2) {
-        lastMoveGrid2 = dir; 
+        lastMoveGrid2 = dir;
     }
 
     return processMovement(pos, grid, dir);
