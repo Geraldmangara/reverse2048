@@ -51,7 +51,7 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
         outputFile << " | Alg 2: " << reason2Str <<  endl;
     }
 
-    // Print history only for winning games as per previous logic/brief example
+    // Print history only for winning games 
     if (ai1Won || ai2Won) {
         for (const auto& step : result.history) {
             // Write step header (Initial Board or Move #)
@@ -59,7 +59,7 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
                 outputFile << "  Initial Board" <<  endl;
                 outputFile << "------------------------------------------------------------------------------------" <<  endl;
             } else {
-                // Replicating directionToString logic here for move characters
+                // directionToString logic here for move characters
                 char move1 = tolower(step.move1);
                 char move2 = tolower(step.move2);
                  string move1Str, move2Str;
@@ -84,7 +84,7 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
                            <<  setw(result.gridSize) << "     " << "             Alg_2: " << move2Str <<  endl;
             }
 
-            // Print grids side-by-side with displayGameState formatting
+            // printing
             for (int i = 0; i < result.gridSize; ++i) {
                 // Grid 1
                 outputFile << "|";
@@ -108,9 +108,9 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
                 }
                 outputFile << " |"; // Close Grid 2
 
-                outputFile << "\n"; // Newline after each row
+                outputFile << "\n"; 
             }
-            // Print separator line after the grid
+        
             outputFile << "-----------------------------------------------------------------------\n";
         }
     }
@@ -120,13 +120,13 @@ void BoardPrinter::writeGameResultToFile( ofstream& outputFile, const GameResult
     } else if (!ai1Won && ai2Won) {
         outputFile << "Winner: Alg 2, total moves " << result.ai2MoveCount <<  endl;
     } else if (ai1Won && ai2Won) {
-        // Both won - determine winner by move count
+        // Because the game will run both Ais until completion, and for testing conditions, print out a winner by the move number
         if (result.ai1MoveCount <= result.ai2MoveCount) {
             outputFile << "Winner: Alg 1 (reached win in " << result.ai1MoveCount << " moves)" <<  endl;
         } else {
             outputFile << "Winner: Alg 2 (reached win in " << result.ai2MoveCount << " moves)" <<  endl;
         }
     }
-    // Add a blank line after each game's output
+    
     outputFile <<  endl;
 }
