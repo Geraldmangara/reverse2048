@@ -1,7 +1,7 @@
 #include "ExpectimaxAI.h"
 #include "GridGame.h"
 using namespace std;
-// Initialize direction vectors for movement
+// Initialise direction vectors for movement
 void ExpectimaxAI::initDirectionVectors()
 {
     dirVectors =
@@ -13,7 +13,7 @@ void ExpectimaxAI::initDirectionVectors()
     };
 }
 
-// Initialize possible spawn values based on the starting number
+
 void ExpectimaxAI::initPossibleSpawnValues()
 {
     if (startNumber == 512)
@@ -30,12 +30,12 @@ void ExpectimaxAI::initPossibleSpawnValues()
     }
     else
     {
-        // Default case - just use the startNumber
+
         possibleSpawnValues = {startNumber};
     }
 }
 
-// Calculate position weight based on exponential decay from a corner
+// Calculate position weight based on exponential decay from a corner, refer to the equation 3 in report
 double ExpectimaxAI::getPositionWeight(int row, int col) const
 {
     // Using bottom-right corner as the preferred position
@@ -137,7 +137,7 @@ vector<Position> ExpectimaxAI::getEmptyCells(const vector<vector<int>>& g) const
     return emptyCells;
 }
 
-// Checks if grid has met the win condition of 2
+
 bool ExpectimaxAI::hasValueTwo(const vector<vector<int>>& g) const
 {
     for (int i = 0; i < gridSize; i++)
@@ -158,13 +158,12 @@ bool ExpectimaxAI::checkGameOver(const vector<vector<int>>& g) const
             if (g[i][j] == EMPTY)
                 return false;
 
-    // Check for possible merges
+    // Check for possible merges.
     for (int i = 0; i < gridSize; i++)
     {
         for (int j = 0; j < gridSize; j++)
         {
-            if ((j < gridSize - 1 && g[i][j] == g[i][j+1]) ||
-                    (i < gridSize - 1 && g[i][j] == g[i+1][j]))
+            if ((j < gridSize - 1 && g[i][j] == g[i][j+1]) ||(i < gridSize - 1 && g[i][j] == g[i+1][j]))
                 return false;
         }
     }
@@ -194,7 +193,7 @@ double ExpectimaxAI::evaluateGrid(const vector<vector<int>>& g) const
                 // Apply position weight with exponential decay
                 double positionWeight = getPositionWeight(i, j);
 
-                //SCORE: The most important line of code
+                //SCORE: refer to equation 4 from the reoport
                 score += (1000.0 / g[i][j]) * positionWeight; // Prefer smaller values with position-based weighting
 
                 // Track minimum value
@@ -266,7 +265,7 @@ double ExpectimaxAI::expectimax(const vector<vector<int>>& g, int depth, bool is
         }
     }
 
-    evalCache[cacheKey] = result;
+    evalCache[cacheKey] = result; // this will hopefully reduce computational speed
     return result;
 }
 
@@ -322,12 +321,13 @@ void ExpectimaxAI::resetCache()
 }
 
 // Play one step
+// Makes the move
 bool ExpectimaxAI::playOneStep(GridGame* game)
 {
     char bestMove = getBestMove();
-    if (bestMove != 'n')
+    if (bestMove != 'n') // if valid move exists, execute it.
     {
-        return game->performProcessMovement(position, grid, bestMove);
+        return game->performProcessMovement(position, grid, bestMove); // used a method call for the ai to play a move.
     }
     return false;
 }
