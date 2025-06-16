@@ -31,7 +31,6 @@ Key files:
 
 Getting Started
 ---------------
-- For you ashwin
 
 ### Installation
 1. Clone the repository:
